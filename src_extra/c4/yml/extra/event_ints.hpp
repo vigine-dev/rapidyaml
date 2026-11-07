@@ -331,13 +331,27 @@ C4_HOT C4_ALWAYS_INLINE evt_size prevpos(evt_bits const *C4_RESTRICT arr, evt_si
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
+struct RYML_EXPORT cevtbuf
+{
+    evt_bits const* C4_RESTRICT ptr = {};
+    evt_size                    len = {};
+    evt_size                    cap = {};
+};
+
 struct RYML_EXPORT evtbuf
 {
     evt_bits *C4_RESTRICT ptr = {};
     evt_size              len = {};
     evt_size              cap = {};
+
+    // auto convert to cevtbuf
+    C4_ALWAYS_INLINE operator cevtbuf const& () const noexcept { return reinterpret_cast<cevtbuf const&>(*this); } // NOLINT
 };
 
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 C4_SUPPRESS_WARNING_MSVC_WITH_PUSH(4251) // needs to have dll-interface to be used by clients
 struct RYML_EXPORT Buffers
@@ -356,6 +370,8 @@ struct RYML_EXPORT Buffers
     }
 };
 C4_SUPPRESS_WARNING_MSVC_POP
+
+
 
 
 /** Read YAML source and, without undergoing a full parse, estimate
@@ -413,13 +429,20 @@ struct MaybeParent
 };
 RYML_EXPORT MaybeParent find_parent_(evt_bits const* C4_RESTRICT evts, evt_size pos) noexcept;
 RYML_EXPORT bool has_next_doc_and_is_expl_(evt_bits const* C4_RESTRICT evts, evt_size evts_size, evt_size pos) RYML_NOEXCEPT;
-RYML_EXPORT evt_bits get_all_bits_key(evt_bits const* C4_RESTRICT evts, evt_size evts_size, evt_size pos) RYML_NOEXCEPT;
-RYML_EXPORT evt_size find_matching_open_(evt_bits const* C4_RESTRICT evts, evt_size pos) RYML_NOEXCEPT;
-RYML_EXPORT evt_size find_matching_close_(evt_bits const* C4_RESTRICT evts, evt_size sz, evt_size pos) RYML_NOEXCEPT;
-RYML_EXPORT evt_size find_next_entry_(evt_bits const* C4_RESTRICT evts, evt_size sz, evt_size pos, evt_bits key_or_val) RYML_NOEXCEPT;
+RYML_EXPORT evt_bits get_all_bits_key_or_val_(evt_bits const* C4_RESTRICT evts, evt_size evts_size, evt_size pos) RYML_NOEXCEPT;
+RYML_EXPORT evt_size find_matching_open_(evt_bits const* C4_RESTRICT evts, evt_size pos);
+RYML_EXPORT evt_size find_matching_close_(evt_bits const* C4_RESTRICT evts, evt_size sz, evt_size pos);
+RYML_EXPORT evt_size find_next_entry_(evt_bits const* C4_RESTRICT evts, evt_size sz, evt_size pos, evt_bits key_or_val);
 RYML_EXPORT evt_bits scalar_style_choose_json_ievt(csubstr scalar) noexcept;
 RYML_EXPORT evt_bits scalar_style_choose_block_ievt(csubstr scalar) noexcept;
 RYML_EXPORT evt_bits scalar_style_choose_flow_ievt(csubstr scalar) noexcept;
+
+inline evt_size find_next_sibling(evt_bits const* evts, evt_size sz, evt_size pos)
+{
+    if(evts[pos] & ievt::BEG_)
+        pos = detail::find_matching_close_(evts, sz, pos);
+    return ievt::nextpos(evts, pos);
+}
 
 
 struct EmitKickoff
