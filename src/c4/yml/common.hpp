@@ -484,6 +484,36 @@ C4_SUPPRESS_WARNING_POP
         (buf) = nullptr;                                            \
     } while(false)
 
+
+namespace detail {
+// resize a trivial buffer with length+capacity
+C4_NODISCARD void* grow_buf_raw(void* buf, size_t len, size_t cap, size_t next_cap, Callbacks const& cb);
+// resize a trivial buffer with length only
+inline C4_NODISCARD void* grow_buf_raw(void* buf, size_t len, size_t next_len, Callbacks const& cb)
+{
+    return grow_buf_raw(buf, len, len, next_len, cb);
+}
+
+// resize a trivial buffer with length+capacity
+template<class T>
+C4_NODISCARD T* grow_buf(T* buf, size_t len, size_t cap, size_t next_cap, Callbacks const& cb)
+{
+    static_assert(std::is_trivial<T>::value, "must be mempcy-able");
+    return reinterpret_cast<T*>(grow_buf_raw(buf, sizeof(T) * len, sizeof(T) * cap, sizeof(T) * next_cap, cb)); // NOLINT
+}
+// resize a trivial buffer with length only
+template<class T>
+C4_NODISCARD T* grow_buf(T* buf, size_t len, size_t next_len, Callbacks const& cb)
+{
+    return grow_buf(buf, len, len, next_len, cb);
+}
+} // detail
+
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
 namespace detail {
 template<int8_t signedval, uint8_t unsignedval>
 struct _charconstant_t // is there a better way to do this?
